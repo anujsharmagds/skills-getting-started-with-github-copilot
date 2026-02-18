@@ -4,6 +4,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
 
+  // Function to unregister a participant from an activity
+  async function unregisterParticipant(activityName, email) {
+    try {
+      const response = await fetch(
+        `/activities/${encodeURIComponent(activityName)}/unregister?email=${encodeURIComponent(email)}`,
+        { method: "POST" }
+      );
+      if (response.ok) {
+        fetchActivities();
+      } else {
+        alert('Failed to unregister participant');
+      }
+    } catch (error) {
+      console.error('Error unregistering:', error);
+      alert('Failed to unregister participant');
+    }
+  }
+
   // Function to fetch activities from API
   async function fetchActivities() {
     try {
@@ -20,12 +38,65 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
-        activityCard.innerHTML = `
+        // Create card header
+        const header = document.createElement("div");
+        header.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
         `;
+        activityCard.appendChild(header);
+
+        // Create participants section
+        const participantsSection = document.createElement('div');
+        participantsSection.className = 'participants';
+
+        const participantsTitle = document.createElement('h4');
+        participantsTitle.textContent = 'Participants';
+        participantsSection.appendChild(participantsTitle);
+
+        const ul = document.createElement('ul');
+        ul.className = 'participants-list';
+        ul.style.listStyle = 'none';
+        ul.style.padding = '0';
+
+        if (Array.isArray(details.participants) && details.participants.length) {
+          details.participants.forEach(p => {
+            const li = document.createElement('li');
+            li.style.display = 'flex';
+            li.style.justifyContent = 'space-between';
+            li.style.alignItems = 'center';
+            li.style.marginBottom = '8px';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = p;
+            li.appendChild(nameSpan);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '✕';
+            deleteBtn.className = 'delete-participant';
+            deleteBtn.style.cursor = 'pointer';
+            deleteBtn.style.background = 'none';
+            deleteBtn.style.border = 'none';
+            deleteBtn.style.color = '#d32f2f';
+            deleteBtn.style.fontSize = '18px';
+            deleteBtn.style.padding = '0 5px';
+            deleteBtn.style.marginLeft = '10px';
+            deleteBtn.addEventListener('click', () => {
+              unregisterParticipant(name, p);
+            });
+            li.appendChild(deleteBtn);
+            ul.appendChild(li);
+          });
+        } else {
+          const li = document.createElement('li');
+          li.className = 'no-participants';
+          li.textContent = 'No participants yet';
+          ul.appendChild(li);
+        }
+        participantsSection.appendChild(ul);
+        activityCard.appendChild(participantsSection);
 
         activitiesList.appendChild(activityCard);
 
@@ -40,6 +111,8 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error fetching activities:", error);
     }
   }
+
+  
 
   // Handle form submission
   signupForm.addEventListener("submit", async (event) => {
